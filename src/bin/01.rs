@@ -17,7 +17,7 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut result: [u32; 3] = [0; 3];    // and we'll just keep this ordered
+    let mut result: [u32; 3] = [0; 3]; // and we'll just keep this ordered
     let mut this_elf = 0u32;
     for l in input.lines() {
         if l.is_empty() {
