@@ -11,3 +11,4 @@ publish = false
 pico-args = "0.5.0"
 itertools = "0.10.5"
 regex = "1.7.0"
+ringbuffer = "0.10.0"
