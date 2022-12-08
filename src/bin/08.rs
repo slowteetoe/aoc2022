@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::BTreeSet;
 
 #[derive(Debug)]
@@ -88,7 +89,50 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let (grid, num_rows, num_cols) = build_grid(input);
+    let mut max_view = 0;
+
+    for (y, row) in grid.iter().enumerate() {
+        for (x, col) in row.iter().enumerate() {
+            // println!("checking left");
+            let mut view_left = 0;
+            for dx in (0..x).rev() {
+                view_left += 1; // can see one tree, even if that blocks the rest
+                if col.height <= row.get(dx)?.height {
+                    break; // view is blocked
+                }
+            }
+            // println!("checking right");
+            let mut view_right = 0;
+            for dx in x + 1..num_cols {
+                view_right += 1;
+                if col.height <= row.get(dx)?.height {
+                    break;
+                }
+            }
+            // println!("checking from top");
+            let mut view_top = 0;
+            for dy in (0..y).rev() {
+                view_top += 1;
+                if col.height <= grid.get(dy)?.get(x)?.height {
+                    break;
+                }
+            }
+            // println!("checking from bottom");
+            let mut view_bot = 0;
+            for dy in y + 1..num_rows {
+                view_bot += 1;
+                if col.height <= grid.get(dy)?.get(x)?.height {
+                    break;
+                }
+            }
+            let local_view = vec![view_top, view_left, view_bot, view_right];
+            let local_tot = local_view.iter().fold(1, |acc, x| acc * x);
+            // dbg!(&local_view, &local_tot);
+            max_view = max(max_view, local_tot);
+        }
+    }
+    Some(max_view)
 }
 
 fn main() {
@@ -110,6 +154,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 8);
-        assert_eq!(part_two(&input), None);
+        assert_eq!(part_two(&input), Some(8));
     }
 }
