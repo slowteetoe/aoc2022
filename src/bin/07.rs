@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     cell::RefCell,
     collections::HashMap,
     fmt::{self},
@@ -29,6 +28,16 @@ impl Folder {
     // pub fn add_subdir(&mut self, name: &str, new_dir: Rc<RefCell<Folder>>) {
     //     self.subdirs.insert(String::from(name), new_dir);
     // }
+
+    pub fn recurse(&self, acc: &mut u128) -> () {
+        println!("{} -> {}", self.name, self.size);
+        if self.size < 100000 {
+            *acc += self.size;
+        }
+        for subdir in self.subdirs.values() {
+            subdir.borrow().recurse(acc);
+        }
+    }
 }
 
 impl fmt::Display for Folder {
@@ -126,16 +135,14 @@ pub fn part_one(input: &str) -> Option<u128> {
     }
     dbg!(&root);
     // finally, after all this buildup, traverse from the root and gather up the data we need
-    // let ptr = Rc::clone(&root);
-    // if ptr.borrow().size < 100000 {
-    //     println!(
-    //         "found a dir: {:?} of size: {:?}",
-    //         ptr.borrow().name,
-    //         ptr.borrow().size
-    //     );
-    // }
+    // if this dir is < 100k then add its size
+    // otherwise, see if one of the subdirs is smaller than 100k and add its size
+    let mut result = 0u128;
+    let ptr = Rc::clone(&root);
 
-    Some(Rc::clone(&root).borrow().size.clone())
+    // Some(Rc::clone(&root).borrow().size.clone())
+    ptr.borrow().recurse(&mut result);
+    Some(result)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
