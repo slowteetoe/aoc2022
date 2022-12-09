@@ -48,6 +48,7 @@ impl Board {
                 self.move_n(n);
             }
         }
+        // dbg!(&self.knots);
     }
 
     pub fn move_head(&mut self, dir: (i16, i16)) {
@@ -56,6 +57,7 @@ impl Board {
         let next = (curr.0 + dir.0, curr.1 + dir.1);
         self.knots[0].pos = next;
         self.knots[0].visited.insert(next);
+        // println!("head moved to {:?}", &self.knots[0].pos);
     }
 
     /// Move the nth knot to maintain the correct distance to the n-1 knot
@@ -63,8 +65,12 @@ impl Board {
         let distance = Self::distance(self.knots[n - 1].pos, self.knots[n].pos);
         if distance >= 2.0 {
             let trailing = self.knots[n - 1].prev;
+            self.knots[n].prev = self.knots[n].pos;
             self.knots[n].pos = trailing;
             self.knots[n].visited.insert(trailing);
+            // println!("knot {:?} moved to {:?}", n, &self.knots[n].pos);
+        } else {
+            // println!("knot {:?} not moving", n);
         }
     }
 
@@ -98,7 +104,7 @@ pub fn part_two(input: &str) -> Option<usize> {
 fn main() {
     let input = &advent_of_code::read_file("inputs", 9);
     advent_of_code::solve!(1, part_one, input);
-    advent_of_code::solve!(2, part_two, input);
+    advent_of_code::solve!(2, part_two, input); // 4512 too high
 }
 
 #[cfg(test)]
