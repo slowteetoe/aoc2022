@@ -41,13 +41,22 @@ macro_rules! solve {
     }};
 }
 
-pub fn read_file(folder: &str, day: u8) -> String {
+pub fn read_file_with_part(folder: &str, day: u8, part: Option<u8>) -> String {
     let cwd = env::current_dir().unwrap();
 
-    let filepath = cwd.join("src").join(folder).join(format!("{:02}.txt", day));
+    let filename = match part {
+        Some(part) => format!("{:02}-{}.txt", day, part),
+        None => format!("{:02}.txt", day),
+    };
+
+    let filepath = cwd.join("src").join(folder).join(filename);
 
     let f = fs::read_to_string(filepath);
     f.expect("could not open input file")
+}
+
+pub fn read_file(folder: &str, day: u8) -> String {
+    read_file_with_part(folder, day, None)
 }
 
 fn parse_time(val: &str, postfix: &str) -> f64 {

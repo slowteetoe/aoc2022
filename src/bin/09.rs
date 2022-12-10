@@ -32,11 +32,11 @@ impl Board {
     }
 
     pub fn process_move_cmd(&mut self, command: &str) {
-        // println!("** {:?} **", &command);
+        // println!("== {:?} ==", &command);
         let mut iter = command.split(' ');
         let dir = match iter.next().unwrap() {
-            "U" => (0, 1),
-            "D" => (0, -1),
+            "U" => (0, -1),
+            "D" => (0, 1),
             "L" => (-1, 0),
             "R" => (1, 0),
             _ => unreachable!("or something went really wrong"),
@@ -47,8 +47,8 @@ impl Board {
             for n in 1..self.knots.len() {
                 self.move_n(n);
             }
+            // self.show();
         }
-        // dbg!(&self.knots);
     }
 
     pub fn move_head(&mut self, dir: (i16, i16)) {
@@ -57,31 +57,83 @@ impl Board {
         let next = (curr.0 + dir.0, curr.1 + dir.1);
         self.knots[0].pos = next;
         self.knots[0].visited.insert(next);
-        // println!("head moved to {:?}", &self.knots[0].pos);
     }
 
     /// Move the nth knot to maintain the correct distance to the n-1 knot
     pub fn move_n(&mut self, n: usize) {
-        let distance = Self::distance(self.knots[n - 1].pos, self.knots[n].pos);
-        if distance >= 2.0 {
-            let trailing = self.knots[n - 1].prev;
-            self.knots[n].prev = self.knots[n].pos;
-            self.knots[n].pos = trailing;
-            self.knots[n].visited.insert(trailing);
-            // println!("knot {:?} moved to {:?}", n, &self.knots[n].pos);
+        let head = self.knots[n - 1].pos;
+        let tail = self.knots[n].pos;
+
+        let next_pos = if head.0 == tail.0 + 2 && head.1 == tail.1 {
+            // move tail right one space
+            (tail.0 + 1, tail.1)
+        } else if head.0 == tail.0 - 2 && head.1 == tail.1 {
+            // move tail left one space
+            (tail.0 - 1, tail.1)
+        } else if head.1 == tail.1 + 2 && head.0 == tail.0 {
+            // move tail down one space
+            (tail.0, tail.1 + 1)
+        } else if head.1 == tail.1 - 2 && head.0 == tail.0 {
+            // move tail up one space
+            (tail.0, tail.1 - 1)
         } else {
-            // println!("knot {:?} not moving", n);
-        }
+            if Self::distance(head, tail) < 1.5 {
+                (tail.0, tail.1)
+            } else if head.0 > tail.0 && head.1 > tail.1 {
+                (tail.0 + 1, tail.1 + 1)
+            } else if head.0 < tail.0 && head.1 < tail.1 {
+                (tail.0 - 1, tail.1 - 1)
+            } else if head.0 < tail.0 && head.1 > tail.1 {
+                (tail.0 - 1, tail.1 + 1)
+            } else if head.0 > tail.0 && head.1 < tail.1 {
+                (tail.0 + 1, tail.1 - 1)
+            } else {
+                (tail.0, tail.1)
+            }
+        };
+
+        self.knots[n].prev = self.knots[n].pos;
+        self.knots[n].pos = next_pos;
+        self.knots[n].visited.insert(next_pos);
     }
 
     pub fn distance(head: (i16, i16), tail: (i16, i16)) -> f32 {
-        // guess we'll have to figure this out, manhattan doesn't work for our diagonal
-        // (head.0 - tail.0).abs() + (head.1 - tail.1).abs()
-        // plain distance?
         let part1 = i32::pow((head.0 - tail.0) as i32, 2);
         let part2 = i32::pow((head.1 - tail.1) as i32, 2);
-
         f32::sqrt((part1 + part2) as f32)
+    }
+
+    pub fn show(&self) {
+        let dim = self.knots.len() + 16; // we'll never stretch more than len() in any direction, but examples were 26 pixels
+        let mut grid = vec![vec![String::from("."); dim]; dim];
+        // center the display on the H and translate all coords
+        let t = (
+            self.knots[0].pos.0 * -1 + (dim as i16 / 2),
+            self.knots[0].pos.1 * -1 + (dim as i16 / 2),
+        );
+
+        for n in (0..self.knots.len()).rev() {
+            let virt = (self.knots[n].pos.0 + t.0, self.knots[n].pos.1 + t.1);
+
+            let label = match n {
+                0 => String::from("H"),
+                _ => n.to_string(),
+            };
+
+            *grid
+                .get_mut(virt.1 as usize)
+                .expect("wrong row")
+                .get_mut(virt.0 as usize)
+                .expect("wrong col") = label;
+        }
+
+        for rows in grid.iter() {
+            for cols in rows.iter() {
+                print!("{}", cols);
+            }
+            println!();
+        }
+        println!();
     }
 }
 
@@ -97,6 +149,7 @@ pub fn part_two(input: &str) -> Option<usize> {
     let mut b = Board::new(10);
     for cmd in input.lines() {
         b.process_move_cmd(cmd);
+        // b.show();
     }
     Some(b.knots[9].visited.len())
 }
@@ -104,7 +157,7 @@ pub fn part_two(input: &str) -> Option<usize> {
 fn main() {
     let input = &advent_of_code::read_file("inputs", 9);
     advent_of_code::solve!(1, part_one, input);
-    advent_of_code::solve!(2, part_two, input); // 4512 too high
+    advent_of_code::solve!(2, part_two, input);
 }
 
 #[cfg(test)]
@@ -119,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_part_two() {
-        let input = advent_of_code::read_file("examples", 9);
-        assert_eq!(part_two(&input), Some(1));
+        let input = advent_of_code::read_file_with_part("examples", 9, Some(2));
+        assert_eq!(part_two(&input), Some(36));
     }
 }
