@@ -20,21 +20,17 @@ impl Display {
     }
 }
 
-// bet I could do this functionally...
 pub fn build_register_instructions(input: &str) -> Vec<i32> {
-    let mut r = vec![];
-    for instruction in input.lines() {
-        if instruction.starts_with("addx ") {
-            let val = instruction.replace("addx ", "").parse::<i32>().unwrap();
-            // take 2 cycles to complete
-            r.push(0);
-            r.push(val);
-        } else if instruction.starts_with("noop") {
-            // takes 1 cycle to complete
-            r.push(0);
-        }
-    }
-    r
+    input
+        .lines()
+        .flat_map(|line| {
+            if line.starts_with("addx ") {
+                vec![0, line.replace("addx ", "").parse::<i32>().unwrap()] // takes 2 cycles to complete
+            } else {
+                vec![0] // noop takes 1 cycle but doesn't change register
+            }
+        })
+        .collect()
 }
 
 pub fn part_one(input: &str) -> Option<i32> {
@@ -43,9 +39,9 @@ pub fn part_one(input: &str) -> Option<i32> {
     let mut signal_strength = 0i32;
     let mut register = 1i32;
     for (idx, x) in register_instructions.iter().enumerate() {
+        // adjust for 0-based indexing
         if (idx + 1) % 20 == 0 && idx > 0 {
             if idx + 1 == 20 || ((idx + 1) / 20) % 2 == 1 {
-                // println!("x at {:?} is {:?}", &idx + 1, &register);
                 signal_strength += register * (idx + 1) as i32;
             }
         }
