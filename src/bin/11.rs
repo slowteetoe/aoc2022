@@ -25,6 +25,7 @@ pub struct Monkey {
     pub items: Vec<Item>,
     op: fn(u128) -> u128,
     test: fn(u128) -> u8,
+    stress_reducer: fn(u128) -> u128,
     inspected: u128,
 }
 
@@ -34,6 +35,7 @@ impl Monkey {
             items,
             op,
             test,
+            stress_reducer: |n| n / 3, // for part one, we just use this
             inspected: 0,
         }
     }
@@ -55,7 +57,7 @@ impl Monkey {
             //     "{}",
             //     Red.paint(format!("\tnew worry level: {}", &item.worry_level))
             // );
-            item.worry_level = item.worry_level / 3;
+            item.worry_level = (self.stress_reducer)(item.worry_level);
             // println!(
             //     "{}",
             //     Blue.paint(format!("\tnew worry level: {}", &item.worry_level))
@@ -223,6 +225,11 @@ pub fn part_one(input: &str) -> Option<u128> {
 pub fn part_two(input: &str) -> Option<u128> {
     let mut monkeys = parse_monkeys(input);
 
+    // we need to change the stress, so we'll use
+    for m in monkeys.iter_mut() {
+        m.stress_reducer = |n| n % (3 * 5 * 2 * 13 * 11 * 17 * 19 * 7)
+    }
+
     // even bumping the datatype to u128 only gets us 44 rounds, there has to be a pattern to the inspections
     let num_rounds = 10_000;
 
@@ -238,9 +245,6 @@ pub fn part_two(input: &str) -> Option<u128> {
                 }
             }
         }
-        // for (n, m) in monkeys.iter().enumerate() {
-        //     println!("monkey[{}] -> {}", n, &m.inspected);
-        // }
     }
     // find the 2 most active monkeys
     let mut most = vec![0; 2];
