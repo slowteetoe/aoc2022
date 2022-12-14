@@ -86,6 +86,10 @@ pub fn parse_exec_time(output: &str) -> f64 {
     })
 }
 
+pub fn manhattan(p1: (i32, i32), p2: (i32, i32)) -> i32 {
+    i32::abs(p1.0 - p2.0) + i32::abs(p1.1 - p2.1)
+}
+
 /// copied from: https://github.com/rust-lang/rust/blob/1.64.0/library/std/src/macros.rs#L328-L333
 #[cfg(test)]
 macro_rules! assert_approx_eq {
