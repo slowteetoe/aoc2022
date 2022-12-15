@@ -1,6 +1,7 @@
 use core::fmt;
 use std::cell::RefCell;
 
+use itertools::EitherOrBoth::*;
 use itertools::Itertools;
 
 // why not, let's get complicated and make a list structure!
@@ -25,35 +26,106 @@ pub struct PacketPair {
 impl PacketPair {
     pub fn in_order(&self) -> bool {
         println!("comparing {:?} and {:?}", self.p1.0, self.p2.0);
-        for (left, right) in self.p1.0.iter().zip(self.p2.0.iter()) {
-            println!("comparing {:?} and {:?}", left, right);
-            match (&**left, &**right) {
-                (Lval::Num(l), Lval::Num(r)) => {
-                    if l > r {
-                        println!("left num is larger than right num, not in order");
+        // Itertools zip_longest is pretty useful for this!
+        for pair in self.p1.0.iter().zip_longest(self.p2.0.iter()) {
+            match pair {
+                Both(left, right) => {
+                    println!("comparing {:?} and {:?}", left, right);
+                    if !in_order(&**left, &**right) {
+                        println!("*** packets NOT in order ***");
                         return false;
                     }
                 }
-                (Lval::List(l), Lval::List(r)) => {
-                    if l.len() > r.len() {
-                        println!("right list is shorter, so can't be in order");
-                        return false;
-                    }
-                    // otherwise we have to check each element
-                    // but this will need to be recursive I think since lists can be lists of lists
+                Left(_) => {
+                    println!("right ran out of elements, inputs NOT in right order");
+                    return false;
                 }
-                (Lval::Num(l), Lval::List(r)) => {
-                    // make left a list and call compare on the two
-                }
-                (Lval::List(l), Lval::Num(r)) => {
-                    // make right a list and call compare on the two
-                }
-                _ => unreachable!(""),
+                Right(_) => {}
             }
         }
         println!("*** packets in order ***");
         true
     }
+}
+
+fn in_order(left: &Lval, right: &Lval) -> bool {
+    match (left, right) {
+        (Lval::Num(l), Lval::Num(r)) => {
+            if l > r {
+                println!("left num is larger than right num, not in order");
+                return false;
+            }
+        }
+        (Lval::List(left), Lval::List(right)) => {
+            if left.len() > right.len() {
+                println!("right list is shorter, so can't be in order");
+                return false;
+            }
+            // make a recursive call
+            let result = lists_in_order(left, right);
+            if result == false {
+                println!("lists weren't in order");
+                return false;
+            }
+        }
+        (Lval::Num(l), Lval::List(r)) => {
+            println!("make left a list and call compare on the two");
+            if !r.is_empty() {
+                let rval = &**r.get(0).unwrap();
+                match *rval {
+                    Lval::Num(n) => {
+                        if *l > n {
+                            println!("not in order, left num is > val in right list");
+                            return false;
+                        }
+                    }
+                    _ => {
+                        unreachable!("shouldn't have hit this scenario, rval was {:?}", rval);
+                    }
+                }
+            }
+        }
+        (Lval::List(l), Lval::Num(r)) => {
+            println!("make right a list and call compare on the two");
+            if !l.is_empty() {
+                let lval = &**l.get(0).unwrap();
+                match *lval {
+                    Lval::Num(n) => {
+                        if n > *r {
+                            println!("not in order, val in left list is > right num");
+                            return false;
+                        }
+                    }
+                    _ => {
+                        unreachable!("shouldn't have hit this scenario");
+                    }
+                }
+            }
+        }
+        _ => unreachable!(""),
+    }
+    true
+}
+
+fn lists_in_order(left: &Vec<Box<Lval>>, right: &Vec<Box<Lval>>) -> bool {
+    for pair in left.iter().zip_longest(right.iter()) {
+        match pair {
+            Both(left, right) => {
+                println!("comparing {:?} and {:?}", left, right);
+                if !in_order(&**left, &**right) {
+                    println!("*** packets NOT in order ***");
+                    return false;
+                }
+            }
+            Left(_) => {
+                println!("right ran out of elements, inputs NOT in right order");
+                return false;
+            }
+            Right(_) => {}
+        }
+    }
+    println!("lists_in_order still LIES?");
+    true
 }
 
 impl fmt::Display for Lval {
@@ -223,5 +295,55 @@ mod tests {
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 13);
         assert_eq!(part_two(&input), None);
+    }
+
+    #[test]
+    fn test_packet1() {
+        let p = parse_packets(&String::from("[[1],[2,3,4]]\n[[1],4]"));
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet2() {
+        let p = parse_packets(&String::from("[[1],[2,3,4]]\n[[1],4]"));
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet3() {
+        let p = parse_packets(&String::from("[9]\n[[8,7,6]]"));
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet4() {
+        let p = parse_packets(&String::from("[[4,4],4,4]\n[[4,4],4,4,4]"));
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet5() {
+        let p = parse_packets(&String::from("[7,7,7,7]\n[7,7,7]"));
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet6() {
+        let p = parse_packets(&String::from("[]\n[3]"));
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet7() {
+        let p = parse_packets(&String::from("[[[]]]\n[[]]"));
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_packet8() {
+        let p = parse_packets(&String::from(
+            "[1,[2,[3,[4,[5,6,7]]]],8,9]\n[1,[2,[3,[4,[5,6,0]]]],8,9]",
+        ));
+        assert_eq!(false, p.get(0).unwrap().in_order());
     }
 }
