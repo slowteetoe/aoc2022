@@ -57,10 +57,6 @@ fn in_order(left: &Lval, right: &Lval) -> bool {
             }
         }
         (Lval::List(left), Lval::List(right)) => {
-            if left.len() > right.len() {
-                println!("right list is shorter, so can't be in order");
-                return false;
-            }
             // make a recursive call
             let result = lists_in_order(left, right);
             if result == false {
@@ -70,36 +66,28 @@ fn in_order(left: &Lval, right: &Lval) -> bool {
         }
         (Lval::Num(l), Lval::List(r)) => {
             println!("make left a list and call compare on the two");
-            if !r.is_empty() {
-                let rval = &**r.get(0).unwrap();
-                match *rval {
-                    Lval::Num(n) => {
-                        if *l > n {
-                            println!("not in order, left num is > val in right list");
-                            return false;
-                        }
-                    }
-                    _ => {
-                        unreachable!("shouldn't have hit this scenario, rval was {:?}", rval);
-                    }
-                }
+
+            let new_list = Packet::list_of(vec![Lval::Num(*l)]);
+
+            // have to put right back into a list since we matched out of it
+            let children = &*r;
+            if !lists_in_order(
+                &vec![new_list],
+                &vec![Box::new(Lval::List(children.to_vec()))],
+            ) {
+                return false;
             }
         }
         (Lval::List(l), Lval::Num(r)) => {
             println!("make right a list and call compare on the two");
-            if !l.is_empty() {
-                let lval = &**l.get(0).unwrap();
-                match *lval {
-                    Lval::Num(n) => {
-                        if n > *r {
-                            println!("not in order, val in left list is > right num");
-                            return false;
-                        }
-                    }
-                    _ => {
-                        unreachable!("shouldn't have hit this scenario");
-                    }
-                }
+            let children = &*l;
+            let new_list = Packet::list_of(vec![Lval::Num(*r)]);
+
+            if !lists_in_order(
+                &vec![Box::new(Lval::List(children.to_vec()))],
+                &vec![new_list],
+            ) {
+                return false;
             }
         }
         _ => unreachable!(""),
@@ -124,7 +112,6 @@ fn lists_in_order(left: &Vec<Box<Lval>>, right: &Vec<Box<Lval>>) -> bool {
             Right(_) => {}
         }
     }
-    println!("lists_in_order still LIES?");
     true
 }
 
