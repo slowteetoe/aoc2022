@@ -12,6 +12,7 @@ pub enum Packet {
     Tombstone, // this is awkward, but let's get it working before cleaning it up
 }
 
+#[derive(Debug)]
 pub struct Packets(Vec<Packet>, Vec<Packet>);
 
 impl Packets {
@@ -43,36 +44,8 @@ impl Packets {
         }
         false
     }
-
-    // impl in_order2(&self) -> bool {
-    //     println!("comparing {:?} and {:?}", self.0, self.1);
-
-    //     for pair in self.0.iter().zip_longest(self.1.iter()) {
-    //         match pair {
-    //             Both(left, right) => {
-    //                 // call is_this_in_order()
-    //                 match (left, right) {
-    //                     (Packet::Num(left), Packet::Num(right)) => {
-    //                         if left == right {
-    //                             // have to continue comparing, don't know if they're in order yet
-    //                         } else {
-    //                             return left < right;
-    //                         }
-    //                     }
-    //                 }
-    //             },
-    //             Right(_) => {
-    //                 true
-    //             },
-    //             Left(_) => {
-    //                 false
-    //             },
-    //         }
-    //     }
-    // }
 }
 
-// so confused.  I guess we're really representing "decision made" true or false, or "undetermined" and we have to keep checking packet
 fn in_order(left: &Packet, right: &Packet) -> Ordering {
     match (left, right) {
         (Packet::Num(left_num), Packet::Num(right_num)) => {
@@ -104,7 +77,7 @@ fn in_order(left: &Packet, right: &Packet) -> Ordering {
     }
 }
 
-// get rid of the awkward Option(bool) and use Ordering
+// got rid of the awkward Option(bool) and use Ordering
 fn lists_in_order(left: &Vec<Packet>, right: &Vec<Packet>) -> Ordering {
     for pair in left.iter().zip_longest(right.iter()) {
         match pair {
@@ -148,54 +121,81 @@ impl Packet {
         let mut stack = vec![];
         let mut thisvec = RefCell::new(Vec::new());
 
-        for ch in p.chars() {
-            // println!("looking at {}, stack currently {:?}", ch, &stack);
-            match ch {
-                '[' => stack.push(Packet::Tombstone),
-                '0'..='9' => {
-                    stack.push(Packet::Num(ch.to_string().parse::<u8>().unwrap()));
-                }
-                ']' => {
-                    // start unwinding until we hit a tombstone, reverse the vec and put it back on the stack
-                    // println!("poppin like it's hot...");
-                    loop {
-                        let val = stack.pop();
-                        if val.is_none() {
-                            // hit the end of the stack, nothing left
-                            unreachable!("shouldn't bottom out");
+        let mut iter = p.chars().peekable();
+        loop {
+            match iter.next() {
+                Some(ch) => {
+                    match ch {
+                        '[' => {
+                            stack.push(Packet::Tombstone);
                         }
-                        let item = val.unwrap();
-                        match item {
-                            Packet::List(contents) => {
-                                thisvec.borrow_mut().push(Packet::List(contents));
-                            }
-                            Packet::Num(_) => {
-                                thisvec.borrow_mut().push(item);
-                            }
-                            Packet::Tombstone => {
-                                // see what we have, push back onto the stack as a list
-                                if stack.is_empty() {
-                                    // we're at the last tombstone, so it's complete
-                                    let mut result = thisvec.get_mut().to_vec();
-                                    result.reverse();
-                                    return result;
-                                } else {
-                                    // println!("done popping stack, pushing the list we just built up back on");
-                                    let mut tmp = thisvec.get_mut().to_vec();
-                                    tmp.reverse();
-                                    stack.push(Packet::List(tmp));
+                        '0'..='9' => {
+                            // fml - didn't see that there are tens in the input =/
+                            if ch == '1' {
+                                let next_ch = iter.peek();
+                                if next_ch.is_some() {
+                                    // check if it's a digit and parse the 2-digit num if it is
+                                    let num_to_parse = match *next_ch.unwrap() {
+                                        '0'..='9' => {
+                                            let mut num = String::from("1");
+                                            num.push(iter.next().unwrap());
+                                            println!(
+                                                "Oh special cases, how I hate thee {:?}",
+                                                &num
+                                            );
+                                            num
+                                        }
+                                        _ => String::from("1"),
+                                    };
+                                    stack.push(Packet::Num(num_to_parse.parse::<u8>().unwrap()));
                                 }
-                                thisvec = RefCell::new(Vec::new());
-                                break;
+                            } else {
+                                stack.push(Packet::Num(ch.to_string().parse::<u8>().unwrap()));
                             }
                         }
+                        ']' => {
+                            // start unwinding until we hit a tombstone, reverse the vec and put it back on the stack
+                            // println!("poppin like it's hot...");
+                            loop {
+                                let val = stack.pop();
+                                if val.is_none() {
+                                    // hit the end of the stack, nothing left
+                                    unreachable!("shouldn't bottom out");
+                                }
+                                let item = val.unwrap();
+                                match item {
+                                    Packet::List(contents) => {
+                                        thisvec.borrow_mut().push(Packet::List(contents));
+                                    }
+                                    Packet::Num(_) => {
+                                        thisvec.borrow_mut().push(item);
+                                    }
+                                    Packet::Tombstone => {
+                                        // see what we have, push back onto the stack as a list
+                                        if stack.is_empty() {
+                                            // we're at the last tombstone, so it's complete
+                                            let mut result = thisvec.get_mut().to_vec();
+                                            result.reverse();
+                                            return result;
+                                        } else {
+                                            // println!("done popping stack, pushing the list we just built up back on");
+                                            let mut tmp = thisvec.get_mut().to_vec();
+                                            tmp.reverse();
+                                            stack.push(Packet::List(tmp));
+                                        }
+                                        thisvec = RefCell::new(Vec::new());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        ',' => (),
+                        _ => unreachable!("invalid chars in input"),
                     }
                 }
-                ',' => (),
-                _ => unreachable!("invalid chars in input"),
+                None => (),
             }
         }
-        unreachable!("unbalanced input if we see this");
     }
 }
 
@@ -218,16 +218,13 @@ pub fn parse_packets(input: &str) -> Vec<Packets> {
 
 pub fn part_one(input: &str) -> Option<usize> {
     let packets = &parse_packets(&input);
-    for p in packets {
-        println!("{:?} {:?}", &p.0, &p.1);
-    }
 
-    let answer: usize = packets
+    let answer = packets
         .iter()
         .enumerate()
-        .map(|(idx, pair)| (idx, pair.in_order()))
+        .map(|(idx, pair)| (idx + 1, pair.in_order()))
         .filter(|m| m.1)
-        .map(|m| m.0 + 1)
+        .map(|m| m.0)
         .sum();
     Some(answer)
 }
@@ -321,6 +318,49 @@ mod tests {
     fn test_rando_packet2() {
         // got this from reddit
         let p = parse_packets("[[1],[2,3,4]]\n[[1],2,3,4]");
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_rando_packet3() {
+        // got this from reddit
+        let p = parse_packets("[[8,[[7]]]]\n[[[[8]]]]");
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_rando_packet4() {
+        let p = parse_packets("[[[1]],1]\n[[1],2]");
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_rando_packet5() {
+        let p = parse_packets("[[1],1]\n[[[1]],2]");
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_rando_packet6() {
+        let p = parse_packets("[[[1]],2]\n[[1],1]");
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_rando_packet7() {
+        let p = parse_packets("[[1],2]\n[[[1]],1]");
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_more_rando_packets() {
+        let p = parse_packets("[[8,[[7,10,10,5],[8,4,9]],3,5],[[[3,9,4],5,[7,5,5]],[[3,2,5],[10],[5,5],0,[8]]],[4,2,[],[[7,5,6,3,0],[4,4,10,7],6,[8,10,9]]],[[4,[],4],10,1]]\n[[[[8],[3,10],[7,6,3,7,4],1,8]]]");
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_from_results() {
+        let p = parse_packets("[[10]]\n[[3,[],[7,4,8,[]],1]]");
         assert_eq!(false, p.get(0).unwrap().in_order());
     }
 }
