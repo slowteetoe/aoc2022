@@ -1,141 +1,159 @@
 use core::fmt;
 use std::cell::RefCell;
+use std::cmp::Ordering;
 
 use itertools::EitherOrBoth::*;
 use itertools::Itertools;
 
-// why not, let's get complicated and make a list structure!
-type LvalChildren = Vec<Box<Lval>>;
-
 #[derive(Debug, Clone, PartialEq)]
-pub enum Lval {
-    Tombstone,
+pub enum Packet {
     Num(u8),
-    List(LvalChildren),
+    List(Vec<Packet>),
+    Tombstone, // this is awkward, but let's get it working before cleaning it up
 }
 
-#[derive(Debug)]
-pub struct Packet(Vec<Box<Lval>>);
+pub struct Packets(Vec<Packet>, Vec<Packet>);
 
-#[derive(Debug)]
-pub struct PacketPair {
-    p1: Packet,
-    p2: Packet,
-}
-
-impl PacketPair {
+impl Packets {
     pub fn in_order(&self) -> bool {
-        println!("comparing {:?} and {:?}", self.p1.0, self.p2.0);
-        // Itertools zip_longest is pretty useful for this!
-        for pair in self.p1.0.iter().zip_longest(self.p2.0.iter()) {
+        println!("comparing {:?} and {:?}", self.0, self.1);
+
+        for pair in self.0.iter().zip_longest(self.1.iter()) {
+            println!("{:?}", pair);
             match pair {
                 Both(left, right) => {
                     println!("comparing {:?} and {:?}", left, right);
-                    if !in_order(&**left, &**right) {
-                        println!("*** packets NOT in order ***");
-                        return false;
+                    match in_order(left, right) {
+                        Ordering::Less => return true,
+                        Ordering::Greater => return false,
+                        Ordering::Equal => {
+                            println!("couldn't tell, continuing to process rules");
+                        }
                     }
                 }
                 Left(_) => {
                     println!("right ran out of elements, inputs NOT in right order");
                     return false;
                 }
-                Right(_) => {}
+                Right(_) => {
+                    println!("left ran out of elements, inputs in right order");
+                    return true;
+                }
             }
         }
-        println!("*** packets in order ***");
-        true
+        false
     }
+
+    // impl in_order2(&self) -> bool {
+    //     println!("comparing {:?} and {:?}", self.0, self.1);
+
+    //     for pair in self.0.iter().zip_longest(self.1.iter()) {
+    //         match pair {
+    //             Both(left, right) => {
+    //                 // call is_this_in_order()
+    //                 match (left, right) {
+    //                     (Packet::Num(left), Packet::Num(right)) => {
+    //                         if left == right {
+    //                             // have to continue comparing, don't know if they're in order yet
+    //                         } else {
+    //                             return left < right;
+    //                         }
+    //                     }
+    //                 }
+    //             },
+    //             Right(_) => {
+    //                 true
+    //             },
+    //             Left(_) => {
+    //                 false
+    //             },
+    //         }
+    //     }
+    // }
 }
 
-fn in_order(left: &Lval, right: &Lval) -> bool {
+// so confused.  I guess we're really representing "decision made" true or false, or "undetermined" and we have to keep checking packet
+fn in_order(left: &Packet, right: &Packet) -> Ordering {
     match (left, right) {
-        (Lval::Num(l), Lval::Num(r)) => {
-            if l > r {
-                println!("left num is larger than right num, not in order");
-                return false;
+        (Packet::Num(left_num), Packet::Num(right_num)) => {
+            // the question/examples are horribly written, but someone on reddit said that it helps to think of the numeric comparison as
+            // alphabetic.  i.e. the 2 in [2, 0] is already greater than the 1 in [1, 9] so the packets are in order and you don't have to compare the rest
+            if left_num == right_num {
+                Ordering::Equal
+            } else {
+                left_num.cmp(right_num)
             }
         }
-        (Lval::List(left), Lval::List(right)) => {
-            // make a recursive call
-            let result = lists_in_order(left, right);
-            if result == false {
-                println!("lists weren't in order");
-                return false;
-            }
-        }
-        (Lval::Num(l), Lval::List(r)) => {
+        (Packet::List(left), Packet::List(right)) => lists_in_order(left, right),
+        (Packet::Num(l), Packet::List(r)) => {
             println!("make left a list and call compare on the two");
-
-            let new_list = Packet::list_of(vec![Lval::Num(*l)]);
-
             // have to put right back into a list since we matched out of it
-            let children = &*r;
-            if !lists_in_order(
-                &vec![new_list],
-                &vec![Box::new(Lval::List(children.to_vec()))],
-            ) {
-                return false;
-            }
+            lists_in_order(
+                &vec![Packet::List(vec![Packet::Num(*l)])],
+                &vec![Packet::List(r.to_vec())],
+            )
         }
-        (Lval::List(l), Lval::Num(r)) => {
+        (Packet::List(l), Packet::Num(r)) => {
             println!("make right a list and call compare on the two");
-            let children = &*l;
-            let new_list = Packet::list_of(vec![Lval::Num(*r)]);
-
-            if !lists_in_order(
-                &vec![Box::new(Lval::List(children.to_vec()))],
-                &vec![new_list],
-            ) {
-                return false;
-            }
+            lists_in_order(
+                &vec![Packet::List(l.to_vec())],
+                &vec![Packet::List(vec![Packet::Num(*r)])],
+            )
         }
         _ => unreachable!(""),
     }
-    true
 }
 
-fn lists_in_order(left: &Vec<Box<Lval>>, right: &Vec<Box<Lval>>) -> bool {
+// get rid of the awkward Option(bool) and use Ordering
+fn lists_in_order(left: &Vec<Packet>, right: &Vec<Packet>) -> Ordering {
     for pair in left.iter().zip_longest(right.iter()) {
         match pair {
             Both(left, right) => {
                 println!("comparing {:?} and {:?}", left, right);
-                if !in_order(&**left, &**right) {
-                    println!("*** packets NOT in order ***");
-                    return false;
+                let result = in_order(left, right);
+                match result {
+                    Ordering::Equal => {
+                        continue;
+                    }
+                    _ => {
+                        return result;
+                    }
                 }
             }
             Left(_) => {
-                println!("right ran out of elements, inputs NOT in right order");
-                return false;
+                println!("right LIST ran out of elements, inputs NOT in right order");
+                return Ordering::Greater;
             }
-            Right(_) => {}
+            Right(_) => {
+                println!("left LIST ran out of elements, input is in correct order");
+                return Ordering::Less;
+            }
         }
     }
-    true
+    Ordering::Equal
 }
 
-impl fmt::Display for Lval {
+impl fmt::Display for Packet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Lval::Num(n) => write!(f, "{}", n),
-            Lval::List(children) => write!(f, "({})", rec_print(&children)),
-            Lval::Tombstone => write!(f, "🪦"),
+            Packet::Num(n) => write!(f, "{}", n),
+            Packet::List(children) => write!(f, "({})", rec_print(&children)),
+            Packet::Tombstone => Ok(()),
         }
     }
 }
 
 impl Packet {
-    pub fn parse(p: &str) -> Packet {
+    pub fn parse(p: &str) -> Vec<Packet> {
         let mut stack = vec![];
         let mut thisvec = RefCell::new(Vec::new());
 
         for ch in p.chars() {
             // println!("looking at {}, stack currently {:?}", ch, &stack);
             match ch {
-                '[' => stack.push(Box::new(Lval::Tombstone)),
+                '[' => stack.push(Packet::Tombstone),
                 '0'..='9' => {
-                    stack.push(Box::new(Lval::Num(ch.to_string().parse::<u8>().unwrap())));
+                    stack.push(Packet::Num(ch.to_string().parse::<u8>().unwrap()));
                 }
                 ']' => {
                     // start unwinding until we hit a tombstone, reverse the vec and put it back on the stack
@@ -147,25 +165,25 @@ impl Packet {
                             unreachable!("shouldn't bottom out");
                         }
                         let item = val.unwrap();
-                        match *item {
-                            Lval::List(contents) => {
-                                thisvec.borrow_mut().push(Box::new(Lval::List(contents)));
+                        match item {
+                            Packet::List(contents) => {
+                                thisvec.borrow_mut().push(Packet::List(contents));
                             }
-                            Lval::Num(_) => {
+                            Packet::Num(_) => {
                                 thisvec.borrow_mut().push(item);
                             }
-                            Lval::Tombstone => {
+                            Packet::Tombstone => {
                                 // see what we have, push back onto the stack as a list
                                 if stack.is_empty() {
                                     // we're at the last tombstone, so it's complete
                                     let mut result = thisvec.get_mut().to_vec();
                                     result.reverse();
-                                    return Packet(result);
+                                    return result;
                                 } else {
                                     // println!("done popping stack, pushing the list we just built up back on");
                                     let mut tmp = thisvec.get_mut().to_vec();
                                     tmp.reverse();
-                                    stack.push(Box::new(Lval::List(tmp)));
+                                    stack.push(Packet::List(tmp));
                                 }
                                 thisvec = RefCell::new(Vec::new());
                                 break;
@@ -173,49 +191,15 @@ impl Packet {
                         }
                     }
                 }
-                ',' => {
-                    continue;
-                }
+                ',' => (),
                 _ => unreachable!("invalid chars in input"),
             }
         }
         unreachable!("unbalanced input if we see this");
     }
-
-    pub fn list_of(stuff: Vec<Lval>) -> Box<Lval> {
-        let mut children = vec![];
-        for s in stuff {
-            children.push(Box::new(s))
-        }
-        Box::new(Lval::List(children))
-    }
-
-    pub fn lval_num(n: u8) -> Box<Lval> {
-        Box::new(Lval::Num(n))
-    }
 }
 
-impl fmt::Display for Packet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut result = vec![];
-        for expr in &self.0 {
-            match *expr.clone() {
-                Lval::Num(n) => {
-                    result.push(format!("{}", n));
-                }
-                Lval::List(children) => {
-                    result.push(format!("({})", rec_print(&children)));
-                }
-                Lval::Tombstone => {
-                    result.push(String::from("🪦"));
-                }
-            }
-        }
-        write!(f, "{}", result.join(","))
-    }
-}
-
-fn rec_print(children: &[Box<Lval>]) -> String {
+fn rec_print(children: &[Packet]) -> String {
     let mut resp = vec![];
     for c in children {
         resp.push(format!("{}", c));
@@ -223,28 +207,19 @@ fn rec_print(children: &[Box<Lval>]) -> String {
     resp.join(",")
 }
 
-impl fmt::Display for PacketPair {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "p1: [{}], p2: [{}]", &self.p1, &self.p2)
-    }
-}
-
-pub fn parse_packets(input: &str) -> Vec<PacketPair> {
+pub fn parse_packets(input: &str) -> Vec<Packets> {
     input
         .lines()
         .chain(vec!["\n\n"])
         .tuples()
-        .map(|(p1, p2, _whitespace)| PacketPair {
-            p1: Packet::parse(p1),
-            p2: Packet::parse(p2),
-        })
+        .map(|(p1, p2, _whitespace)| Packets(Packet::parse(p1), Packet::parse(p2)))
         .collect_vec()
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
     let packets = &parse_packets(&input);
     for p in packets {
-        println!("{}", &p);
+        println!("{:?} {:?}", &p.0, &p.1);
     }
 
     let answer: usize = packets
@@ -331,6 +306,21 @@ mod tests {
         let p = parse_packets(&String::from(
             "[1,[2,[3,[4,[5,6,7]]]],8,9]\n[1,[2,[3,[4,[5,6,0]]]],8,9]",
         ));
+        assert_eq!(false, p.get(0).unwrap().in_order());
+    }
+
+    #[test]
+    fn test_rando_packet() {
+        // got this from reddit
+        let p = parse_packets("[7,7,7]\n[7,7,7,[]]");
+        assert_eq!(true, p.get(0).unwrap().in_order());
+    }
+
+    // [[1],[2,3,4]]\n[[1],2,3,4]
+    #[test]
+    fn test_rando_packet2() {
+        // got this from reddit
+        let p = parse_packets("[[1],[2,3,4]]\n[[1],2,3,4]");
         assert_eq!(false, p.get(0).unwrap().in_order());
     }
 }
