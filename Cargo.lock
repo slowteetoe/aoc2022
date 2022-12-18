@@ -7,10 +7,12 @@ name = "advent_of_code"
 version = "0.8.0"
 dependencies = [
  "ansi_term",
+ "crate",
  "itertools",
  "pico-args",
  "regex",
  "ringbuffer",
+ "text_io",
 ]
 
 [[package]]
@@ -30,6 +32,12 @@ checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "crate"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba551890c7c7d0917c71ca40559c42156ffffd703c45558114968cecb83bfd97"
 
 [[package]]
 name = "either"
@@ -80,6 +88,12 @@ name = "ringbuffer"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "310a2514cb46bb500a2f2ad70c79c51c5a475cc23faa245d2c675faabe889370"
+
+[[package]]
+name = "text_io"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5f0c8eb2ad70c12a6a69508f499b3051c924f4b1cfeae85bfad96e6bc5bba46"
 
 [[package]]
 name = "winapi"
