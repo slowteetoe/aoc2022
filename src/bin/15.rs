@@ -34,8 +34,8 @@ pub fn read_sensors(input: &str) -> (BTreeMap<(i64, i64), usize>, BTreeSet<(i64,
 pub fn part_one(input: &str) -> Option<usize> {
     let sensors = read_sensors(input);
 
-    let target = 2_000_000i64;
-    // let target = 9i64;
+    // let target = 2_000_000i64;
+    let target = 10i64;
 
     let mut ranges = vec![];
 
@@ -60,35 +60,26 @@ pub fn part_one(input: &str) -> Option<usize> {
             // now figure out which lines intersect target line, it should always be the \/ or /\ lines
             let p1 = intersection((left, down), target_line);
             if p1.is_some() {
-                println!("intersected left down, looking for other point");
+                println!(
+                    "intersected left down at {:?}, looking for other point on right down",
+                    p1.unwrap()
+                );
                 let p2 = intersection((right, down), target_line);
+                println!("intersected right down at {:?}", p2);
                 ranges.push((p1.unwrap().0, p2.unwrap().0)); // these will all be on the y (target) axis
             } else {
                 let p1 = intersection((left, up), target_line);
                 if p1.is_none() {
                     panic!("I thought this intersected, but apparently not!");
                 }
-                let p2 = intersection((right, down), target_line);
+                let p2 = intersection((right, up), target_line);
                 ranges.push((p1.unwrap().0, p2.unwrap().0));
             }
         } else {
             println!("\tcan't reach the target line");
             continue;
         }
-
-        // calculate_exclusion_zone(sensor, dist, target)
-        //     .iter()
-        //     .filter(|(_x, y)| *y == target)
-        //     .for_each(|pt| {
-        //         excluded.insert(pt.clone());
-        //     });
     }
-    // for pt in sensors.1 {
-    //     if pt.1 == target {
-    //         println!("Beacon at {:?}", &pt);
-    //         excluded.remove(&pt.clone());
-    //     }
-    // }
 
     // FIXME now we need to process the ranges, merging together
     ranges.sort();
@@ -172,21 +163,4 @@ mod tests {
         let input = advent_of_code::read_file("examples", 15);
         assert_eq!(part_two(&input), None);
     }
-
-    // #[test]
-    // fn test_exclusion_zone() {
-    //     let result = calculate_exclusion_zone((0, 0), 1);
-    //     assert_eq!(
-    //         result.len(),
-    //         vec![(0, 1), (1, 0), (-1, 0), (0, -1), (0, 0)].len()
-    //     );
-    //     let result = calculate_exclusion_zone((0, 0), 2);
-    //     assert_eq!(result.len(), 13);
-
-    //     let result = calculate_exclusion_zone((0, 0), 3);
-    //     assert_eq!(result.len(), 25);
-
-    //     let result = calculate_exclusion_zone((0, 0), 4);
-    //     assert_eq!(result.len(), 41);
-    // }
 }
