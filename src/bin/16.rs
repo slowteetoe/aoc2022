@@ -1,4 +1,8 @@
-use std::collections::BTreeMap;
+use std::{
+    cell::RefCell,
+    cmp,
+    collections::{BTreeMap, HashMap},
+};
 
 use regex::Regex;
 
@@ -38,10 +42,92 @@ pub fn parse(input: &str) -> Cave {
     cave
 }
 
-pub fn part_one(input: &str) -> Option<u32> {
-    let caves = parse(input);
-    dbg!(caves);
-    None
+fn calculate_distances(cave: &Cave) -> BTreeMap<(String, String), i64> {
+    let mut distances = BTreeMap::new();
+    cave.keys().for_each(|x| {
+        cave.keys().for_each(|y| {
+            // we'll generate all the values, e.g. AA -> AA to make the rest easier
+            println!("building route from {} to {}", x, y);
+            let dist = if cave.get(x).unwrap().tunnels.contains(y) {
+                1
+            } else {
+                i64::MAX
+            };
+            distances.entry((x.clone(), y.clone())).or_insert(dist);
+        });
+    });
+    cave.keys().for_each(|k| {
+        cave.keys().for_each(|i| {
+            cave.keys().for_each(|j| {
+                println!("{} to {}", &i, &j);
+                let ij = &*distances.get(&(i.clone(), j.clone())).unwrap();
+                println!("{} to {}", &i, &k);
+                let ik = &*distances.get(&(i.clone(), k.clone())).unwrap();
+                println!("{} to {}", &k, &j);
+                let kj = &*distances.get(&(k.clone(), j.clone())).unwrap();
+                println!("now checking for next hop: {}, {}, {}", ij, ik, kj);
+                let tmp = if *ik == i64::MAX || *kj == i64::MAX {
+                    i64::MAX
+                } else {
+                    cmp::max(*ij, *ik + *kj)
+                };
+                distances.insert((i.clone(), j.clone()), tmp);
+            });
+        });
+    });
+
+    distances
+}
+
+pub fn visit(
+    valve: String,
+    budget: i64,
+    state: i64,
+    cave: &Cave,
+    distances: &BTreeMap<(String, String), i64>,
+    flow: i64,
+    acc: &mut HashMap<i64, i64>,
+) {
+    let n = *acc.entry(state).or_default();
+    acc.insert(state, cmp::max(n, flow));
+    for k in cave.iter().filter(|(_, cv)| cv.flow > 0).map(|(ck, _)| ck) {
+        let dist = distances.get(&(valve.clone(), k.to_string())).unwrap();
+        let new_budget = budget - dist - 1;
+        let mask = cave.get(k).unwrap().mask;
+        if state & mask != 0 || new_budget < 0 {
+            continue;
+        } else {
+            let flow_to_here = cave.get(k).unwrap().flow;
+            visit(
+                k.clone(),
+                new_budget,
+                state | mask,
+                cave,
+                distances,
+                flow + new_budget + flow_to_here,
+                acc,
+            );
+        }
+    }
+}
+
+pub fn part_one(input: &str) -> Option<i64> {
+    let cave = parse(input);
+    let distances = calculate_distances(&cave);
+    dbg!(&distances);
+    let mut acc: HashMap<i64, i64> = HashMap::new();
+    let state = 0i64;
+    visit(
+        String::from("AA"),
+        30i64,
+        state,
+        &cave,
+        &distances,
+        0,
+        &mut acc,
+    );
+    dbg!(cave, &acc);
+    Some(*acc.values().max().unwrap())
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
