@@ -12,6 +12,7 @@ dependencies = [
  "pico-args",
  "regex",
  "ringbuffer",
+ "tap",
  "text_io",
 ]
 
@@ -88,6 +89,12 @@ name = "ringbuffer"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "310a2514cb46bb500a2f2ad70c79c51c5a475cc23faa245d2c675faabe889370"
+
+[[package]]
+name = "tap"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "text_io"
