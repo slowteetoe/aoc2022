@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use tap::tap::Tap;
 
 pub fn parse(input: &str) -> Vec<i64> {
     input.lines().map(|n| n.parse::<i64>().unwrap()).collect()
@@ -50,7 +49,7 @@ pub fn part_one(input: &str) -> Option<i64> {
     )
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
+pub fn part_two(_input: &str) -> Option<u32> {
     None
 }
 

@@ -1,5 +1,4 @@
 use std::{borrow::BorrowMut, collections::HashMap};
-// use ansi_term::Colour::{Green, Red};
 
 #[derive(Debug, Clone)]
 pub struct Item {
@@ -83,7 +82,7 @@ impl Monkey {
 // and figure out how to do this in Rust (return a dynamic function from runtime)
 // or maybe something like rhai
 // TODO Just use a build script to preprocess the input ... ?
-fn parse_monkeys(input: &str) -> Vec<Monkey> {
+fn parse_monkeys(_input: &str) -> Vec<Monkey> {
     // Monkey 0:
     //   Starting items: 79, 98
     //   Operation: new = old * 19
@@ -233,7 +232,7 @@ pub fn part_two(input: &str) -> Option<u128> {
     // even bumping the datatype to u128 only gets us 44 rounds, there has to be a pattern to the inspections
     let num_rounds = 10_000;
 
-    for n in 0..num_rounds {
+    for _ in 0..num_rounds {
         // println!("=== Round {} ===", n + 1);
         for n in 0..monkeys.len() {
             // println!("{}", Green.paint(format!("Monkey {}'s turn", n)));
@@ -268,18 +267,17 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_part_one() {
-        let input = advent_of_code::read_file("examples", 11);
+        let _input = advent_of_code::read_file("examples", 11);
         // assert_eq!(part_one(&input), None);
         // Since I hardcoded the monkeys, the example doesn't work
     }
 
     #[test]
     fn test_part_two() {
-        let input = advent_of_code::read_file("examples", 11);
+        let _input = advent_of_code::read_file("examples", 11);
         // assert_eq!(part_two(&input), None);
         // Since I hardcoded the monkeys, the example doesn't work
     }

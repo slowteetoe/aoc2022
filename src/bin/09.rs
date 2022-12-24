@@ -103,6 +103,7 @@ impl Board {
         f32::sqrt((part1 + part2) as f32)
     }
 
+    #[allow(dead_code)]
     pub fn show(&self) {
         let dim = self.knots.len() + 16; // we'll never stretch more than len() in any direction, but examples were 26 pixels
         let mut grid = vec![vec![String::from("."); dim]; dim];
