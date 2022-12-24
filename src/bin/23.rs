@@ -1,3 +1,4 @@
+use core::num;
 use std::{
     cmp::{max, min},
     collections::{BTreeMap, HashMap},
@@ -58,8 +59,6 @@ pub fn part_one(input: &str) -> Option<u32> {
     let vectors = vectors();
 
     for round in 1..=10 {
-        println!("** Round {} **", round);
-
         let mut proposals = vec![]; // elf at Point is going to want to move to Point
         'nextelf: for elf in elves.iter() {
             // println!("** ELF @ {:?}", &elf);
@@ -170,7 +169,118 @@ pub fn part_one(input: &str) -> Option<u32> {
     Some(spaces as u32 - elves.len() as u32)
 }
 
+// doesn't get much hackier than C+P!
 pub fn part_two(input: &str) -> Option<u32> {
+    let mut elves = parse(input);
+    let mut dir_priority = vec![Point(0, -1), Point(0, 1), Point(-1, 0), Point(1, 0)];
+    let vectors = vectors();
+
+    let num_elves = elves.len();
+
+    for round in 1..=u32::MAX {
+        let mut moved = 0;
+        let mut proposals = vec![]; // elf at Point is going to want to move to Point
+        'nextelf: for elf in elves.iter() {
+            // println!("** ELF @ {:?}", &elf);
+            // ugh, missed that we have to check each of the 8 surrounding spaces to make sure there's at least one elf
+            // probably should have gone with a bit vec or something more efficient instead of doing the same checks many times
+            if !(elves.contains(&Point(elf.0 - 1, elf.1 - 1))
+                || elves.contains(&Point(elf.0, elf.1 - 1))
+                || elves.contains(&Point(elf.0 + 1, elf.1 - 1))
+                || elves.contains(&Point(elf.0 - 1, elf.1))
+                || elves.contains(&Point(elf.0 + 1, elf.1))
+                || elves.contains(&Point(elf.0 - 1, elf.1 + 1))
+                || elves.contains(&Point(elf.0, elf.1 + 1))
+                || elves.contains(&Point(elf.0 + 1, elf.1 + 1)))
+            {
+                // println!("no nearby elves, not going anywhere");
+                proposals.push((elf.clone(), None));
+                continue;
+            }
+            // check in order for the different directions
+            'dircheck: for cardinal in dir_priority.iter() {
+                // println!("{:?} is checking cardinal direction {:?}", &elf, &cardinal);
+                // grab the different vectors and see if there's anyone interfering
+                let v = vectors.get(&cardinal).unwrap();
+                for Point(dx, dy) in v {
+                    let target = Point(elf.0 + dx, elf.1 + dy);
+                    if elves.contains(&target) {
+                        // println!(
+                        //     "elf in the way @ {:?}! checking a different direction",
+                        //     target
+                        // );
+                        continue 'dircheck;
+                    }
+                }
+                let proposal = Point(elf.0 + cardinal.0, elf.1 + cardinal.1);
+                // println!("elf at {:?} proposes moving to {:?}", &elf, &proposal);
+                proposals.push((elf.clone(), Some(proposal)));
+                continue 'nextelf;
+            }
+            // println!("elf couldn't find somewhere to go, staying put!");
+            proposals.push((elf.clone(), None));
+        }
+
+        // dbg!(&proposals);
+        elves.clear();
+        // resolve the proposals (and who stayed in place)
+        let mut did_not_move = proposals
+            .iter()
+            .filter_map(|(elf, prop)| {
+                if prop.is_none() {
+                    Some(elf.clone())
+                } else {
+                    None
+                }
+            })
+            .collect_vec()
+            .to_vec();
+        elves.append(&mut did_not_move);
+
+        // probably would have been more clear to use did_not_move, but it's the same thing since we cleared the elves
+        let mut collisions: HashMap<Point, u8> = elves.iter().map(|elf| (elf.clone(), 1)).collect();
+
+        proposals
+            .iter()
+            .filter(|(_, target)| target.is_some())
+            .for_each(|(_, target)| {
+                collisions
+                    .entry(target.as_ref().unwrap().clone())
+                    .and_modify(|v| *v += 1)
+                    .or_insert(1);
+            });
+
+        // dbg!(&collisions);
+
+        proposals
+            .iter()
+            .filter(|(_, target)| target.is_some())
+            .for_each(|(elf, target)| {
+                if collisions.get(target.as_ref().unwrap()).unwrap() > &1 {
+                    // println!(
+                    //     "elf couldn't move to their proposed location, remaining at {:?}",
+                    //     &elf
+                    // );
+                    elves.push(elf.clone());
+                } else {
+                    // println!("yay, elf can move to their proposed location");
+                    moved += 1;
+                    elves.push(target.as_ref().unwrap().clone());
+                }
+            });
+
+        // println!("new state\n\n{:?}\n\n", &elves);
+        dir_priority.rotate_left(1);
+        // println!("New dir priority = {:?}", dir_priority);
+        println!(
+            "** Round {} complete {}/{} elves moved **",
+            round, moved, num_elves
+        );
+        if moved == 0 {
+            println!("part 2 answer: {}", round);
+            return Some(round);
+        }
+    }
     None
 }
 
@@ -193,6 +303,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 23);
-        assert_eq!(part_two(&input), None);
+        assert_eq!(part_two(&input), Some(20));
     }
 }
