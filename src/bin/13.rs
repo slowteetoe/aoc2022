@@ -1,6 +1,7 @@
 use core::fmt;
 use std::cell::RefCell;
 use std::cmp::Ordering;
+use std::ops::Index;
 
 use itertools::EitherOrBoth::*;
 use itertools::Itertools;
@@ -12,37 +13,48 @@ pub enum Packet {
     Tombstone, // this is awkward, but let's get it working before cleaning it up
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Packets(Vec<Packet>, Vec<Packet>);
 
 impl Packets {
     pub fn in_order(&self) -> bool {
-        println!("comparing {:?} and {:?}", self.0, self.1);
+        match self.ordered() {
+            Ordering::Less => true,
+            _ => false,
+        }
+    }
+
+    pub fn ordered(&self) -> Ordering {
+        // println!("comparing {:?} and {:?}", self.0, self.1);
 
         for pair in self.0.iter().zip_longest(self.1.iter()) {
-            println!("{:?}", pair);
+            // println!("{:?}", pair);
             match pair {
                 Both(left, right) => {
-                    println!("comparing {:?} and {:?}", left, right);
+                    // println!("comparing {:?} and {:?}", left, right);
                     match in_order(left, right) {
-                        Ordering::Less => return true,
-                        Ordering::Greater => return false,
+                        Ordering::Less => {
+                            return Ordering::Less;
+                        }
+                        Ordering::Greater => {
+                            return Ordering::Greater;
+                        }
                         Ordering::Equal => {
-                            println!("couldn't tell, continuing to process rules");
+                            // println!("couldn't tell, continuing to process rules");
                         }
                     }
                 }
                 Left(_) => {
-                    println!("right ran out of elements, inputs NOT in right order");
-                    return false;
+                    // println!("right ran out of elements, inputs NOT in right order");
+                    return Ordering::Greater;
                 }
                 Right(_) => {
-                    println!("left ran out of elements, inputs in right order");
-                    return true;
+                    // println!("left ran out of elements, inputs in right order");
+                    return Ordering::Less;
                 }
             }
         }
-        false
+        return Ordering::Equal;
     }
 }
 
@@ -59,7 +71,7 @@ fn in_order(left: &Packet, right: &Packet) -> Ordering {
         }
         (Packet::List(left), Packet::List(right)) => lists_in_order(left, right),
         (Packet::Num(l), Packet::List(r)) => {
-            println!("make left a list and call compare on the two");
+            // println!("make left a list and call compare on the two");
             // have to put right back into a list since we matched out of it
             lists_in_order(
                 &vec![Packet::List(vec![Packet::Num(*l)])],
@@ -67,7 +79,7 @@ fn in_order(left: &Packet, right: &Packet) -> Ordering {
             )
         }
         (Packet::List(l), Packet::Num(r)) => {
-            println!("make right a list and call compare on the two");
+            // println!("make right a list and call compare on the two");
             lists_in_order(
                 &vec![Packet::List(l.to_vec())],
                 &vec![Packet::List(vec![Packet::Num(*r)])],
@@ -82,7 +94,7 @@ fn lists_in_order(left: &Vec<Packet>, right: &Vec<Packet>) -> Ordering {
     for pair in left.iter().zip_longest(right.iter()) {
         match pair {
             Both(left, right) => {
-                println!("comparing {:?} and {:?}", left, right);
+                // println!("comparing {:?} and {:?}", left, right);
                 let result = in_order(left, right);
                 match result {
                     Ordering::Equal => {
@@ -94,11 +106,11 @@ fn lists_in_order(left: &Vec<Packet>, right: &Vec<Packet>) -> Ordering {
                 }
             }
             Left(_) => {
-                println!("right LIST ran out of elements, inputs NOT in right order");
+                // println!("right LIST ran out of elements, inputs NOT in right order");
                 return Ordering::Greater;
             }
             Right(_) => {
-                println!("left LIST ran out of elements, input is in correct order");
+                // println!("left LIST ran out of elements, input is in correct order");
                 return Ordering::Less;
             }
         }
@@ -139,10 +151,6 @@ impl Packet {
                                         '0'..='9' => {
                                             let mut num = String::from("1");
                                             num.push(iter.next().unwrap());
-                                            println!(
-                                                "Oh special cases, how I hate thee {:?}",
-                                                &num
-                                            );
                                             num
                                         }
                                         _ => String::from("1"),
@@ -229,8 +237,24 @@ pub fn part_one(input: &str) -> Option<usize> {
     Some(answer)
 }
 
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<usize> {
+    let mut merged = String::from(input);
+    merged.push_str("\n[[2]]\n[[6]]");
+
+    let packets = &mut parse_packets(&merged)
+        .iter()
+        .flat_map(|x| [x.0.clone(), x.1.clone()])
+        .collect::<Vec<Vec<Packet>>>();
+
+    packets.sort_unstable_by(|a, b| Packets(a.clone(), b.clone()).ordered());
+
+    let packet2 = Packet::parse("[[2]]");
+    let packet6 = Packet::parse("[[6]]");
+
+    let idx1 = packets.iter().position(|p| *p == packet2);
+    let idx2 = packets.iter().position(|p| *p == packet6);
+    // zero-based so add 1 to each
+    Some((idx1.unwrap() + 1) * (idx2.unwrap() + 1))
 }
 
 fn main() {
@@ -253,7 +277,7 @@ mod tests {
     #[test]
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 13);
-        assert_eq!(part_two(&input), None);
+        assert_eq!(part_two(&input), Some(140));
     }
 
     #[test]
