@@ -63,7 +63,9 @@ pub fn walk_it(curr: &Rc<RefCell<Node>>, path: &mut BTreeSet<(usize, usize)>) ->
             let result = walk_it(opt, path);
             match result {
                 Some(n) => {
-                    return Some(n);
+                    if n < 33 {
+                        return Some(n);
+                    }
                 }
                 _ => {}
             }
@@ -172,7 +174,7 @@ mod tests {
     #[test]
     fn test_part_one() {
         let input = advent_of_code::read_file("examples", 12);
-        assert_eq!(part_one(&input), None);
+        assert_eq!(part_one(&input), Some(31));
     }
 
     #[test]
