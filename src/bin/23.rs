@@ -1,7 +1,6 @@
 use std::{
     cmp::{max, min},
     collections::{BTreeMap, BTreeSet, HashMap},
-    io,
 };
 
 use itertools::Itertools;
@@ -184,7 +183,7 @@ pub fn part_two(input: &str) -> Option<u32> {
     let mut dir_priority = vec![Point(0, -1), Point(0, 1), Point(-1, 0), Point(1, 0)];
     let vectors = vectors();
 
-    let num_elves = elves.len();
+    // let num_elves = elves.len();
 
     for round in 1..=u32::MAX {
         let mut moved = 0;
@@ -282,12 +281,12 @@ pub fn part_two(input: &str) -> Option<u32> {
         // println!("new state\n\n{:?}\n\n", &elves);
         dir_priority.rotate_left(1);
         // println!("New dir priority = {:?}", dir_priority);
-        println!(
-            "** Round {} complete {}/{} elves moved **",
-            round, moved, num_elves
-        );
+        // println!(
+        //     "** Round {} complete {}/{} elves moved **",
+        //     round, moved, num_elves
+        // );
         if moved == 0 {
-            println!("part 2 answer: {}", round);
+            // println!("part 2 answer: {}", round);
             return Some(round);
         }
     }
@@ -296,7 +295,7 @@ pub fn part_two(input: &str) -> Option<u32> {
 
 fn main() {
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::WARN) // switch to TRACE to see all output
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
     let input = &advent_of_code::read_file("inputs", 23);

@@ -87,7 +87,7 @@ impl Player {
     }
 
     fn process_next_instruction(&mut self, instruction: &str) {
-        println!("** * {instruction} * **");
+        // println!("** * {instruction} * **");
         let mut chars = instruction.chars();
         // yes, probably a ringbuffer or even vector would be cleaner
         // you don't update facing until after moving the amount of spaces
@@ -109,7 +109,7 @@ impl Player {
             _ => unreachable!("invalid direction"),
         };
         let amount = chars.as_str().parse::<usize>().unwrap();
-        println!("moving {amount} spaces in the {:?} direction", self.facing);
+        // println!("moving {amount} spaces in the {:?} direction", self.facing);
         let mut steps_taken = 0;
         let mut next_x = self.pos.0;
         let mut next_y = self.pos.1;
@@ -175,10 +175,10 @@ impl Player {
                 let contents = self.map.get(&(next_x, next_y)).unwrap();
                 match *contents {
                     Entity::WALL => {
-                        println!(
-                            "hit wall traveling {} after {steps_taken} steps, stuck at {:?}",
-                            self.facing.0, self.pos
-                        );
+                        // println!(
+                        //     "hit wall traveling {} after {steps_taken} steps, stuck at {:?}",
+                        //     self.facing.0, self.pos
+                        // );
                         break;
                     }
                     Entity::NONE => {}
@@ -191,10 +191,10 @@ impl Player {
                 }
             }
             if steps_taken == amount {
-                println!(
-                    "successfully walked {} {steps_taken} steps, at {:?}",
-                    self.facing.0, self.pos
-                );
+                // println!(
+                //     "successfully walked {} {steps_taken} steps, at {:?}",
+                //     self.facing.0, self.pos
+                // );
                 break;
             }
         }

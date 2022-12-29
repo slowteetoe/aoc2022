@@ -1,9 +1,4 @@
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    fmt::{self},
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 #[derive(PartialEq)]
 struct Folder {
@@ -26,7 +21,7 @@ impl Folder {
     }
 
     pub fn find_less_than_100k(&self, acc: &mut u128) -> () {
-        println!("{} -> {}", self.name, self.size);
+        // println!("{} -> {}", self.name, self.size);
         if self.size < 100000 {
             *acc += self.size;
         }
@@ -36,7 +31,7 @@ impl Folder {
     }
 
     pub fn find_all_sizes(&self, acc: &mut Vec<u128>) -> () {
-        println!("{} -> {}", self.name, self.size);
+        // println!("{} -> {}", self.name, self.size);
         acc.push(self.size);
         for subdir in self.subdirs.values() {
             subdir.borrow().find_all_sizes(acc);
@@ -209,7 +204,7 @@ pub fn part_two(input: &str) -> Option<u128> {
     let total_fs = root.borrow().size;
     let unused = 70000000u128 - total_fs;
     let goal = 30000000u128 - unused;
-    println!("attempting to find first folder giving us > {}", &goal);
+    // println!("attempting to find first folder giving us > {}", &goal);
     for size in all_sizes {
         if size > goal {
             return Some(size);

@@ -194,8 +194,8 @@ pub fn part_one(input: &str) -> Option<u128> {
 
     let num_rounds = 20;
     // after 20 rounds
-    for n in 0..num_rounds {
-        println!("=== Round {} ===", n + 1);
+    for _ in 0..num_rounds {
+        // println!("=== Round {} ===", n + 1);
         for n in 0..monkeys.len() {
             // println!("{}", Green.paint(format!("Monkey {}'s turn", n)));
             let stuff_to_toss = monkeys[n].react();

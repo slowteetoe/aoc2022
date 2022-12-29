@@ -27,14 +27,12 @@ pub struct Grid {
 impl Grid {
     pub fn new(input: &str) -> Self {
         let (x, y, data) = parse(input);
-        let mut s = Self {
+        Self {
             x,
             y,
             expedition: (1, 0),
             data,
-        };
-        // s.data.insert((1, 0), Entity::EXPEDITION(1, 0));
-        s
+        }
     }
 
     pub fn tick(&mut self) -> Option<Outcome> {
@@ -97,24 +95,24 @@ impl Grid {
         // but for now, let's assume there's always a safe move and that we don't need to look ahead
         let (x, y) = self.expedition;
         if self.data.get(&(x + 1, y)).is_none() {
-            println!("expedition moves right");
+            // println!("expedition moves right");
             self.expedition = (x + 1, y);
         } else if self.data.get(&(x, y + 1)).is_none() {
-            println!("expedition moves down");
+            // println!("expedition moves down");
             self.expedition = (x, y + 1);
         } else if y >= 1 && self.data.get(&(x, y - 1)).is_none() {
             // you can go back into the starting point, I guess, but not any further
-            println!("expedition moves up");
+            // println!("expedition moves up");
             self.expedition = (x, y - 1);
         } else if self.data.get(&(x - 1, y)).is_none() {
-            println!("expedition moves left");
+            // println!("expedition moves left");
             self.expedition = (x - 1, y);
         } else if self.data.get(&(x, y)).is_none()
         // || *self.data.get(&(x, y)).unwrap() == Entity::EXPEDITION(x, y)
         {
-            println!("wait")
+            // println!("wait")
         } else {
-            println!("YOU DEAD");
+            // println!("YOU DEAD");
             return Some(Outcome::DEAD);
         }
         if self.expedition == (self.x - 2, self.y - 1) {
@@ -181,7 +179,7 @@ pub fn parse(input: &str) -> (usize, usize, MultiMap<(usize, usize), Entity>) {
 
 pub fn part_one(input: &str) -> Option<u32> {
     let mut grid = Grid::new(input);
-    grid.display();
+    // grid.display();
     for round in 0..256 {
         let status = grid.tick();
         grid.display();
@@ -195,7 +193,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     None
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
+pub fn part_two(_input: &str) -> Option<u32> {
     None
 }
 

@@ -22,10 +22,6 @@ pub fn part_one(input: &str) -> Option<String> {
     Some(convert_to_snafu(&decimal.to_string()))
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
-}
-
 // lets go recursive
 pub fn convert_to_snafu(decimal: &str) -> String {
     // from right to left, 1s, 5s, 25s, 125s, etc
@@ -69,7 +65,6 @@ pub fn convert_from_snafu(snafu: &str) -> String {
 fn main() {
     let input = &advent_of_code::read_file("inputs", 25);
     advent_of_code::solve!(1, part_one, input);
-    advent_of_code::solve!(2, part_two, input);
 }
 
 #[cfg(test)]
@@ -112,12 +107,6 @@ mod tests {
         let input = advent_of_code::read_file("examples", 25);
         // assert_eq!(part_one(&input), Some(4890));
         assert_eq!(part_one(&input), Some(String::from("2=-1=0")));
-    }
-
-    #[test]
-    fn test_part_two() {
-        let input = advent_of_code::read_file("examples", 25);
-        assert_eq!(part_two(&input), None);
     }
 
     #[macro_export]

@@ -143,17 +143,16 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_part_one() {
-        let input = advent_of_code::read_file("examples", 16);
+        let _input = advent_of_code::read_file("examples", 16);
         // assert_eq!(part_one(&input), Some(1651));
     }
 
     #[test]
     fn test_part_two() {
-        let input = advent_of_code::read_file("examples", 16);
+        let _input = advent_of_code::read_file("examples", 16);
         // assert_eq!(part_two(&input), None);
     }
 }

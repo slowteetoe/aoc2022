@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use advent_of_code::helpers;
-use itertools::Itertools;
 use priq::PriorityQueue;
 
 // let's try something different, going to make a directed graph as we parse the grid
@@ -184,7 +183,7 @@ pub fn part_two(input: &str) -> Option<usize> {
         })
         // .collect_vec()
         .min_by(|a, b| a.1.cmp(&b.1));
-    println!("{:?}", &min_dist);
+    // println!("{:?}", &min_dist);
     Some(min_dist.unwrap().1 - 1)
 }
 
