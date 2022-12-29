@@ -1,19 +1,15 @@
-use std::{
-    borrow::Borrow,
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet, HashSet},
-    fmt::Display,
-    rc::Rc,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
-use itertools::Itertools;
+use advent_of_code::helpers;
+use priority_queue::PriorityQueue;
 
 // let's try something different, going to make a directed graph as we parse the grid
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Node {
     coord: (usize, usize),
     elevation: char, // mostly for debugging, not like I ever need that =/
-    exits: Vec<Rc<RefCell<Node>>>,
+    exits: Vec<(usize, usize)>,
+    cost: usize, // since we have to move to a* or dijkstra, we'll just use manhattan distance
 }
 
 impl Node {
@@ -22,33 +18,72 @@ impl Node {
             coord,
             elevation,
             exits: vec![],
+            cost: usize::MAX,
         }
     }
 }
 
-impl std::fmt::Debug for Node {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Node")
-            .field("coord", &self.coord)
-            .field("elevation", &self.elevation)
-            .field(
-                "exits",
-                &self
-                    .exits
-                    .iter()
-                    .map(|n| {
-                        let cell = Borrow::<RefCell<Node>>::borrow(n).borrow().coord;
-                        format!("{:?}", cell)
-                    })
-                    .collect_vec()
-                    .join(","),
-            )
-            .finish()
-    }
-}
+// impl std::fmt::Debug for Node {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("Node")
+//             .field("coord", &self.coord)
+//             .field("elevation", &self.elevation)
+//             .field("cost", &self.cost)
+//             .field(
+//                 "exits",
+//                 &self
+//                     .exits
+//                     .iter()
+//                     .map(|n| {
+//                         let cell = Borrow::<RefCell<Node>>::borrow(n).borrow().coord;
+//                         format!("{:?}", cell)
+//                     })
+//                     .collect_vec()
+//                     .join(","),
+//             )
+//             .finish()
+//     }
+// }
 
-pub fn walk_it(curr: &Rc<RefCell<Node>>, path: &mut BTreeSet<(usize, usize)>) -> Option<usize> {
-    let this_node = Borrow::<RefCell<Node>>::borrow(curr).borrow();
+// FIXME implement a*
+// pub fn reconstruct_path(
+//     came_from: BTreeMap<(usize, usize), (usize, usize)>,
+//     current: (&(usize,usize), &usize),
+// ) -> Vec<(usize, usize)> {
+//     let mut total_path = vec![*current.0];
+//     for cur in came_from.keys() {
+//         total_path.push((cur.0, cur.1));
+//     }
+//     total_path
+// }
+
+// pub fn a_star(start: &Rc<RefCell<Node>>, goal: &Rc<RefCell<Node>>, h) -> Option<Vec<(usize, usize)>>{
+//     let mut open_set = PriorityQueue::new();
+//     let s = Borrow::<RefCell<Node>>::borrow(start).borrow();
+//     open_set.push(s.coord, s.cost);
+//     let came_from = BTreeMap::<(usize,usize), Rc<RefCell<Node>>>::new();
+//     let mut g_score = BTreeMap::new();
+//     g_score.insert(s.coord.clone(), 0);
+//     let mut f_score = BTreeMap::new();
+//     f_score.insert(s.coord, s.cost);
+
+//     while !open_set.is_empty() {
+//         let current = open_set.peek().unwrap();
+//         if *current.0 == Borrow::<RefCell<Node>>::borrow(goal).borrow().coord {
+//             return Some(reconstruct_path(came_from, current));
+//         }
+//         open_set.remove(current.0);
+//         for neighbor in
+//     }
+//     None
+// }
+
+pub fn walk_it(
+    curr: &Node,
+    path: &mut BTreeSet<(usize, usize)>,
+    map: &BTreeMap<(usize, usize), Node>,
+) -> Option<usize> {
+    let this_node = curr;
     if this_node.elevation == 'E' {
         println!("At target, found our path, {:?}", &path);
         return Some(path.len());
@@ -57,10 +92,10 @@ pub fn walk_it(curr: &Rc<RefCell<Node>>, path: &mut BTreeSet<(usize, usize)>) ->
     println!("Currently at {:?}, path so far: {:?}", &pos, &path);
     for opt in this_node.exits.iter() {
         println!("looking at {:?}", opt);
-        if !path.contains(&Borrow::<RefCell<Node>>::borrow(opt).borrow().coord) {
+        if !path.contains(opt) {
             println!("Taking path option: {:?}", opt);
             path.insert(pos.clone());
-            let result = walk_it(opt, path);
+            let result = walk_it(map.get(opt).unwrap(), path, map);
             match result {
                 Some(n) => {
                     if n < 33 {
@@ -76,12 +111,13 @@ pub fn walk_it(curr: &Rc<RefCell<Node>>, path: &mut BTreeSet<(usize, usize)>) ->
     None
 }
 
-pub fn parse(input: &str) -> Rc<RefCell<Node>> {
+pub fn parse(input: &str) -> BTreeMap<(usize, usize), Node> {
     // if we hold onto the starting node, every node that we need to traverse will be attached, since there's a path to the exit
     let mut h = BTreeMap::new();
     // going to make two passes through the data, just to make things easier - first will construct all the nodes, second will connect them
     let mut max_x = 0;
     let mut max_y = 0;
+    let mut goal: Option<(usize, usize)> = None;
     input.lines().enumerate().for_each(|(y, line)| {
         line.chars().enumerate().for_each(|(x, ch)| {
             let ch = match ch {
@@ -89,71 +125,62 @@ pub fn parse(input: &str) -> Rc<RefCell<Node>> {
                 // 'E' => 'z',
                 _ => ch,
             };
-            h.insert((x, y), Rc::new(RefCell::new(Node::new((x, y), ch))));
+            if ch == 'E' {
+                goal = Some((x, y));
+            }
+            h.insert((x, y), Node::new((x, y), ch));
             max_x = x;
         });
         max_y = y;
     });
-    println!("dim: ({:?},{:?})", max_x, max_x);
+    let goal = goal.unwrap();
+    println!("dim: ({:?},{:?}) with goal at: {:?}", max_x, max_x, goal);
+
+    // now that we know where the goal is, we can compute cost (manhattan distance) from each node, as well as track the connected nodes
     input.lines().enumerate().for_each(|(y, line)| {
         line.chars().enumerate().for_each(|(x, _)| {
-            let this_node = h.get(&(x, y)).unwrap();
+            let mut this_node = h.remove(&(x, y)).unwrap();
+            // update the cost
+            this_node.cost =
+                helpers::manhattan((x as i64, y as i64), (goal.0 as i64, goal.1 as i64));
             // check the cardinals
             if y > 0 {
                 let n = h.get(&(x, y - 1)).unwrap();
-                if n.borrow_mut().elevation as u8
-                    <= Borrow::<RefCell<Node>>::borrow(this_node)
-                        .borrow()
-                        .elevation as u8
-                        + 1
-                {
-                    this_node.borrow_mut().exits.push(Rc::clone(n));
+                if n.elevation as u8 <= this_node.elevation as u8 + 1 {
+                    this_node.exits.push(n.coord);
                 }
             }
             if y < max_y {
                 let n = h.get(&(x, y + 1)).unwrap();
-                if n.borrow_mut().elevation as u8
-                    <= Borrow::<RefCell<Node>>::borrow(this_node)
-                        .borrow()
-                        .elevation as u8
-                        + 1
-                {
-                    this_node.borrow_mut().exits.push(Rc::clone(n));
+                if n.elevation as u8 <= this_node.elevation as u8 + 1 {
+                    this_node.exits.push(n.coord);
                 }
             }
             if x > 0 {
                 let n = h.get(&(x - 1, y)).unwrap();
-                if n.borrow_mut().elevation as u8
-                    <= Borrow::<RefCell<Node>>::borrow(this_node)
-                        .borrow()
-                        .elevation as u8
-                        + 1
-                {
-                    this_node.borrow_mut().exits.push(Rc::clone(n));
+                if n.elevation as u8 <= this_node.elevation as u8 + 1 {
+                    this_node.exits.push(n.coord);
                 }
             }
             if x < max_x {
                 let n = h.get(&(x + 1, y)).unwrap();
-                if n.borrow_mut().elevation as u8
-                    <= Borrow::<RefCell<Node>>::borrow(this_node)
-                        .borrow()
-                        .elevation as u8
-                        + 1
-                {
-                    this_node.borrow_mut().exits.push(Rc::clone(n));
+                if n.elevation as u8 <= this_node.elevation as u8 + 1 {
+                    this_node.exits.push(n.coord);
                 }
             }
+            h.insert((x, y), this_node);
         });
     });
     println!("{:#?}", h);
-    h.remove(&(0, 0)).unwrap()
+    h
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let root = parse(input);
-    println!("{:?}", root);
+    let map = parse(input);
+    println!("{:?}", &map);
+    let root = map.get(&(0, 0)).unwrap();
     let mut path = BTreeSet::<(usize, usize)>::new();
-    let answer = walk_it(&root, &mut path);
+    let answer = walk_it(root, &mut path, &map);
     Some(answer.unwrap())
 }
 
