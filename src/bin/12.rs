@@ -141,8 +141,7 @@ pub fn parse(input: &str) -> BTreeMap<(usize, usize), Node> {
         line.chars().enumerate().for_each(|(x, _)| {
             let mut this_node = h.remove(&(x, y)).unwrap();
             // update the cost
-            this_node.cost =
-                helpers::manhattan((x as i64, y as i64), (goal.0 as i64, goal.1 as i64));
+            this_node.cost = helpers::manhattan_usize((x, y), (goal.0, goal.1));
             // check the cardinals
             if y > 0 {
                 let n = h.get(&(x, y - 1)).unwrap();

@@ -7,6 +7,10 @@ pub fn manhattan(p1: (i64, i64), p2: (i64, i64)) -> usize {
     (p1.0.abs_diff(p2.0) + p1.1.abs_diff(p2.1)) as usize
 }
 
+pub fn manhattan_usize(p1: (usize, usize), p2: (usize, usize)) -> usize {
+    p1.0.abs_diff(p2.0) + p1.1.abs_diff(p2.1)
+}
+
 pub fn intersection(
     line1: ((i64, i64), (i64, i64)),
     line2: ((i64, i64), (i64, i64)),
