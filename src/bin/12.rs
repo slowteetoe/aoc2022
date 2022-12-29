@@ -26,13 +26,14 @@ impl Node {
 pub fn reconstruct_path(
     came_from: BTreeMap<(usize, usize), (usize, usize)>,
     current: ((usize, usize), usize),
+    start: (usize, usize),
 ) -> Vec<(usize, usize)> {
     println!("GOOOOAAAAL!!!");
     let mut total_path = vec![];
     let mut curr = current.0;
     loop {
         total_path.push(curr);
-        if curr == (0, 0) {
+        if curr == start {
             break;
         }
         curr = *came_from.get(&curr).unwrap();
@@ -61,7 +62,7 @@ pub fn a_star(
         }
         let current = open_set.pop().unwrap(); // this removes from the PQ
         if current.0 == goal {
-            return Some(reconstruct_path(came_from, current));
+            return Some(reconstruct_path(came_from, current, start));
         }
 
         for neighbor in &map.get(&current.0).unwrap().exits {
@@ -81,20 +82,30 @@ pub fn a_star(
     None
 }
 
-pub fn parse(input: &str) -> (BTreeMap<(usize, usize), Node>, (usize, usize)) {
+pub fn parse(
+    input: &str,
+) -> (
+    BTreeMap<(usize, usize), Node>,
+    (usize, usize), // start
+    (usize, usize), // goal
+) {
     let mut h = BTreeMap::new();
     // going to make two passes through the data, just to make things easier - first will construct all the nodes, second will connect them
     let mut max_x = 0;
     let mut max_y = 0;
+    let mut start = None;
     let mut goal: Option<(usize, usize)> = None;
     input.lines().enumerate().for_each(|(y, line)| {
         line.chars().enumerate().for_each(|(x, ch)| {
-            if ch == 'E' {
-                goal = Some((x, y));
-            }
             let ch = match ch {
-                'S' => 'a',
-                'E' => 'z',
+                'S' => {
+                    start = Some((x, y));
+                    'a'
+                }
+                'E' => {
+                    goal = Some((x, y));
+                    'z'
+                }
                 _ => ch,
             };
             h.insert((x, y), Node::new((x, y), ch));
@@ -137,13 +148,13 @@ pub fn parse(input: &str) -> (BTreeMap<(usize, usize), Node>, (usize, usize)) {
             h.insert((x, y), this_node);
         });
     });
-    (h, goal)
+    (h, start.unwrap(), goal)
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
-    let (map, goal) = parse(input);
+    let (map, start, goal) = parse(input);
 
-    let solution = a_star((0, 0), goal, &map);
+    let solution = a_star(start, goal, &map);
     match solution {
         Some(p) => {
             // println!("path: {:?}", p);
