@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use advent_of_code::helpers;
+use itertools::Itertools;
 use priq::PriorityQueue;
 
 // let's try something different, going to make a directed graph as we parse the grid
@@ -28,7 +29,7 @@ pub fn reconstruct_path(
     current: ((usize, usize), usize),
     start: (usize, usize),
 ) -> Vec<(usize, usize)> {
-    println!("GOOOOAAAAL!!!");
+    // println!("GOOOOAAAAL!!!");
     let mut total_path = vec![];
     let mut curr = current.0;
     loop {
@@ -167,8 +168,24 @@ pub fn part_one(input: &str) -> Option<usize> {
     }
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<usize> {
+    // basically same as part 1, but we're trying to discover the best starting point of elevation 'a'
+    let (map, _start, goal) = parse(input);
+
+    let min_dist = map
+        .iter()
+        .filter_map(|(k, v)| if v.elevation == 'a' { Some(k) } else { None })
+        .filter_map(|starting_point| {
+            let solution = a_star(*starting_point, goal, &map);
+            match solution {
+                Some(solution) => Some((starting_point, solution.len())),
+                None => None,
+            }
+        })
+        // .collect_vec()
+        .min_by(|a, b| a.1.cmp(&b.1));
+    println!("{:?}", &min_dist);
+    Some(min_dist.unwrap().1 - 1)
 }
 
 fn main() {
@@ -190,6 +207,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 12);
-        assert_eq!(part_two(&input), None);
+        assert_eq!(part_two(&input), Some(29));
     }
 }
