@@ -1,46 +1,60 @@
-use std::borrow::Borrow;
 use std::cell::RefCell;
 
 use nom::bytes::complete::tag;
-use nom::character::complete::line_ending;
+use nom::character::complete::{self, line_ending};
 use nom::combinator::opt;
 use nom::multi::many1;
-use nom::sequence::{terminated, tuple};
+use nom::sequence::{preceded, separated_pair, terminated, tuple};
 use nom::IResult;
 
-// ick, this is the first time the AoC macros have really bitten me, the example and actual problem use different
+// ick, this is the first time the AoC macros have bitten me, the example and actual problem use different
 // values that are not read from the input
 thread_local!(static GLOBAL_DATA: RefCell<isize> = RefCell::new(10));
 
-// is this better than just Regex captures? Dunno. But it's a chance to play with Nom
-pub fn sensor_location(input: &str) -> IResult<&str, (isize, isize)> {
-    let (input, _) = tag("Sensor at x=")(input)?;
-    let (input, x) = nom::character::complete::i32(input)?;
-    let (input, _) = tag(", y=")(input)?;
-    let (input, y) = nom::character::complete::i32(input)?;
-    Ok((input, (x as isize, y as isize)))
+#[derive(Debug)]
+pub struct Sensor {
+    x: i32,
+    y: i32,
 }
 
-pub fn beacon_location(input: &str) -> IResult<&str, (isize, isize)> {
-    let (input, _) = tag(": closest beacon is at x=")(input)?;
-    let (input, x) = nom::character::complete::i32(input)?;
-    let (input, _) = tag(", y=")(input)?;
-    let (input, y) = nom::character::complete::i32(input)?;
-    Ok((input, (x as isize, y as isize)))
+#[derive(Debug)]
+pub struct Beacon {
+    x: i32,
+    y: i32,
 }
 
-pub fn line(input: &str) -> IResult<&str, ((isize, isize), (isize, isize))> {
-    let (input, (beacon, sensor)) =
+// nom nom nom nom...
+pub fn location(input: &str) -> IResult<&str, (i32, i32)> {
+    separated_pair(
+        preceded(tag("x="), complete::i32),
+        tag(", "),
+        preceded(tag("y="), complete::i32),
+    )(input)
+}
+
+pub fn sensor_location(input: &str) -> IResult<&str, Sensor> {
+    let (input, _) = tag("Sensor at ")(input)?;
+    let (input, (x, y)) = location(input)?;
+    Ok((input, Sensor { x, y }))
+}
+
+pub fn beacon_location(input: &str) -> IResult<&str, Beacon> {
+    let (input, _) = tag(": closest beacon is at ")(input)?;
+    let (input, (x, y)) = location(input)?;
+    Ok((input, Beacon { x, y }))
+}
+
+pub fn sensor_beacon_pair(input: &str) -> IResult<&str, (Sensor, Beacon)> {
+    let (input, (sensor, beacon)) =
         terminated(tuple((sensor_location, beacon_location)), opt(line_ending))(input)?;
-    Ok((input, (beacon, sensor)))
+    Ok((input, (sensor, beacon)))
 }
 
-pub fn parse(input: &str) -> IResult<&str, Vec<((isize, isize), (isize, isize))>> {
-    many1(line)(input)
+pub fn parse(input: &str) -> IResult<&str, Vec<(Sensor, Beacon)>> {
+    many1(sensor_beacon_pair)(input)
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    // vec<(beacons, sensors)>
     let (_, locations) = parse(input).unwrap();
     println!("{:?}", locations);
 
