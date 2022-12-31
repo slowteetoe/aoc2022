@@ -101,15 +101,52 @@ pub fn part_one(input: &str) -> Option<usize> {
     Some(x_pos.len())
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
+pub fn part_two(input: &str) -> Option<u64> {
     let (_, locations) = parse(input).unwrap();
 
     let mut max_dim: i32 = 0;
     MAX_DIM.with(|dim| {
         max_dim = *dim.borrow();
     });
-    println!("target is: (0,0) to ({:?},{:?})", max_dim, max_dim);
 
+    let sensor_dists = locations
+        .iter()
+        .map(|(s, b)| {
+            (
+                s,
+                helpers::manhattan((s.x as i64, s.y as i64), (b.x as i64, b.y as i64)),
+            )
+        })
+        .collect::<Vec<(&Sensor, usize)>>();
+
+    for y in 0..=max_dim {
+        // 4 million times is still fast enough
+        let mut sensor_ranges = sensor_dists
+            .iter()
+            .filter_map(|(s, dist)| {
+                let distance_to_row = (s.y - y).abs() as i32;
+                if distance_to_row <= *dist as i32 {
+                    let effective_distance = *dist as i32 - distance_to_row;
+                    Some(s.x - effective_distance..s.x + effective_distance + 1)
+                } else {
+                    None
+                }
+            })
+            .collect_vec();
+        sensor_ranges.sort_by(|a, b| a.start.cmp(&b.start));
+
+        let mut x = 0;
+        // iterate over the sensors and see if we have a point that's outside all of them.  each time we process a sensor, we can bump x by the sensor distance calculation at that y coord
+        for range in sensor_ranges {
+            if range.contains(&x) {
+                x = range.end;
+            }
+        }
+        if x <= max_dim {
+            println!("{:?} is the missing beacon", (x, y));
+            return Some(x as u64 * 4_000_000 + y as u64);
+        }
+    }
     None
 }
 
@@ -133,12 +170,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_part_two() {
         MAX_DIM.with(|dim| {
             *dim.borrow_mut() = 20;
         });
         let input = advent_of_code::read_file("examples", 15);
-        assert_eq!(part_two(&input), None);
+        assert_eq!(part_two(&input), Some(56000011));
     }
 }
