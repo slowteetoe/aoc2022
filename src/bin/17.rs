@@ -203,7 +203,8 @@ pub fn part_two(input: &str) -> Option<u128> {
     let (_, shapes) = shapes(ROCKS).unwrap();
     let (_, moves) = moves(input).unwrap();
 
-    play_sorta_tetris(shapes, moves, 1_000_000_000_000)
+    // play_sorta_tetris(shapes, moves, 1_000_000_000_000)
+    None
 }
 
 fn main() {
