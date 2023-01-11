@@ -1,8 +1,8 @@
 name: Update readme ⭐️ progress
 
 on:
-    schedule:
-        - cron: "51 */8 * * *" # Every 8 hours
+    # schedule:
+    #    - cron: "51 */8 * * *" # Every 8 hours
     workflow_dispatch:
     workflow_run:
       workflows:
